@@ -47,7 +47,7 @@ const port = process.env.PORT;
 
 // Middlewares
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174", "https://www.registration.casino", "https://admin.registration.casino"], // Add HTTP variant if testing
+  origin: '*',
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: false,
 }));
