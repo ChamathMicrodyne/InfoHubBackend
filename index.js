@@ -39,6 +39,7 @@ import TenantConfigRouter from "./router/TenantConfigRouter.js";
 import TestimanialsRouter from "./router/TestimanialsRouter.js";
 import TransactionsRouter from "./router/TransactionsRouter.js";
 import WebsiteContentRouter from "./router/WebsiteContentRouter.js";
+import userRouter from "./router/UserRouter.js";
 
 dotenv.config();
 const app = express();
@@ -67,6 +68,7 @@ mongoose
   });
 
 // Routes
+app.use("/api/user", userRouter);
 app.use("/api/advertisement", AdvertisementRouter);
 app.use("/api/agents", AgentsRouter);
 app.use("/api/banners", BannersRouter);
