@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import bodyParser from "body-parser";
+import { createServer } from "node:http";
+import { WebSocketServer } from "ws";
 import AdvertisementRouter from "./router/AdvertisementRouter.js";
 import AgentsRouter from "./router/AgentsRouter.js";
 import BannersRouter from "./router/BannersRouter.js";
@@ -51,9 +53,17 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: false,
 }));
-
 app.use(express.json());
 app.use(bodyParser.json());
+
+/* ---------------------------------------------------------------------------------------------------- */
+// Make wss available in requests for broadcasting
+let wss;
+app.use((req, res, next) => {
+  req.wss = wss;
+  next();
+});
+/* ---------------------------------------------------------------------------------------------------- */
 
 
 // MongoDB connection
@@ -106,7 +116,49 @@ app.use("/api/testimonials", TestimanialsRouter);
 app.use("/api/transactions", TransactionsRouter);
 app.use("/api/websiteContent", WebsiteContentRouter);
 
-// Export for Vercel serverless
-app.listen(port, () => {
-  console.log("Server is running on port " + port);
+
+
+/* ---------------------------------------------------------------------------------------------------- */
+// Create HTTP and WebSocket servers
+const server = createServer(app);
+wss = new WebSocketServer({ server });
+
+// WebSocket connection handler
+wss.on('connection', (ws) => {
+  console.log('A new WebSocket client connected!');
+
+  // Send JSON welcome message
+  ws.send(JSON.stringify({
+    type: 'welcome',
+    message: 'Connected to the WebSocket server!',
+  }));
+
+  // Handle incoming messages
+  ws.on('message', (message) => {
+    try {
+      const parsedMessage = JSON.parse(message.toString());
+
+      if (parsedMessage.type === 'subscribe') {
+        ws.send(JSON.stringify({
+          type: 'confirmation',
+          message: `Subscribed to ${parsedMessage.channel} updates`,
+        }));
+      }
+    } catch (err) {
+      console.error('Error parsing client message:', err);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Invalid message format',
+      }));
+    }
+  });
+
+  ws.on('close', () => {console.log('WebSocket client disconnected')});
+  ws.on('error', (err) => {console.error('WebSocket client error:', err)});
 });
+
+// Start the server
+server.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+/* ---------------------------------------------------------------------------------------------------- */

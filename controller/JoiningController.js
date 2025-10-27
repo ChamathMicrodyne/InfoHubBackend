@@ -41,16 +41,42 @@ export async function updateItems(req, res) {
   const updatingData = req.body;
 
   try {
-    await JoiningItems.updateOne({ id: itemId }, updatingData);
+    const updatedItem = await JoiningItems.findOneAndUpdate(
+      { id: itemId },
+      updatingData,
+      { new: true }
+    );
 
-    res.json({
-      message: "item updated successfully",
+    if (!updatedItem) {
+      return res.status(404).json({
+        message: "Item not found",
+      });
+    }
+
+    // Fetch the full updated dashboard list
+    const allItems = await JoiningItems.find().sort({ id: 1 });
+
+    // Broadcast to WebSocket clients
+    if (req.wss) {
+      req.wss.clients.forEach((client) => {
+        if (client.readyState === client.OPEN) {
+          client.send(JSON.stringify({
+            type: 'joiningUpdate',
+            data: allItems,
+          }));
+        }
+      });
+    }
+
+    res.status(200).json({
+      message: "Item updated successfully",
+      data: updatedItem,
     });
   } catch (err) {
+    console.error("Error updating dashboard item:", err);
     res.status(500).json({
       message: "Internal server error",
-      error: err,
+      error: err.message,
     });
-    return;
   }
 }
